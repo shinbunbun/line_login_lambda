@@ -42,7 +42,7 @@ const authorizeFunc = () => {
 
     //認可リクエストを送信するためのレスポンスを生成
     response.statusCode = 302;
-    response.headers.Location = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${channelId}&redirect_uri=${redirectUri}&state=${state}&scope=openid%20profile&nonce=${nonce}`;
+    response.headers.Location = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${channelId}&redirect_uri=${redirectUri}&state=${state}&scope=openid%20email%20profile&nonce=${nonce}`;
     response.multiValueHeaders = { "Set-Cookie": [`state=${state};HttpOnly`, `nonce=${nonce};HttpOnly`] };
     response.body = JSON.stringify({ "status": "succeed" });
 
@@ -86,6 +86,7 @@ const callbackFunc = async (event) => {
     }
     //レスポンスボディを定義
     let resBody;
+    let email;
 
     try {
         //アクセストークン発行のapiを叩く
@@ -97,9 +98,11 @@ const callbackFunc = async (event) => {
             "client_secret": channelSecret
         }));
         resBody = res.data;
-        //idtokenをデコードする
+        //IDトークンをデコードする
         const idToken = jsonwebtoken.verify(resBody.id_token, channelSecret);
-        //idtokenに含まれているnonceとCookieから取得したnonceが同じものか確認する
+        //メールアドレスを取得
+        email = idToken.email;
+        //IDトークンに含まれているnonceとCookieから取得したnonceが同じものか確認する
         //違う場合はリプレイアタックを受けている可能性があるため、エラーページへリダイレクトして再ログインを要求する
         if (idToken.nonce !== cookie[1].slice(6)) {
             console.log(`idToken.nonce: ${idToken.nonce}, cookie.nonce: ${cookie.nonce}`);
@@ -132,10 +135,9 @@ const callbackFunc = async (event) => {
         //エラーを出力
         console.log(error.response);
     }
-
     //プロフィール表示ページへリダイレクトさせるためのレスポンスを生成
     response.statusCode = 302;
-    response.headers.Location = `${frontUri}/profile/profile.html?userId=${resBody.userId}&displayName=${encodeURIComponent(resBody.displayName)}&pictureUrl=${resBody.pictureUrl}&statusMessage=${encodeURIComponent(resBody.statusMessage)}`;
+    response.headers.Location = `${frontUri}/profile/profile.html?userId=${resBody.userId}&displayName=${encodeURIComponent(resBody.displayName)}&pictureUrl=${resBody.pictureUrl}&statusMessage=${encodeURIComponent(resBody.statusMessage)}&email=${email}`;
     //Cookieに保存していたstateとnonceはもういらないので削除する
     response.multiValueHeaders = { "Set-Cookie": [`state=;HttpOnly`, `nonce=;HttpOnly`] };
     response.body = JSON.stringify({ status: "succeed" });

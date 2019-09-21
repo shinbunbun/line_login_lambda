@@ -74,7 +74,7 @@ const callbackFunc = async (event) => {
     const cookie = event.headers.cookie.split("; ");
     //Cookieからstateを取得
     const cookieState = cookie[0].slice(6);
-    //コールバックで送られてきたstateとCookieから取得したstateが同じものか確認する
+    //リクエストパラメータから取得したstateとCookieから取得したstateが同じものか確認する
     //違うものだった場合はCSRF攻撃を受けている可能性があるため、エラーページへリダイレクトして再ログインを要求する
     if (callbackState !== cookieState) {
         //stateを出力
